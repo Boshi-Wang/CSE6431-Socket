@@ -1,0 +1,1 @@
+- run ```python p0.py``` and ```python p1.py```
