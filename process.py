@@ -9,17 +9,17 @@ class Process:
     def __init__(self, pid, all_ports, num_processes, d=1):
         assert num_processes == len(all_ports)
 
-        self.pid = pid                # integer from 0 to NUM_PROC-1
-        self.all_ports = all_ports    # the port for each process
-        self.port = all_ports[pid]    # own port
+        self.pid = pid                # integer from 0 to NUM_PROC-1, indicating unique id of this process
+        self.all_ports = all_ports    # list of ports for each process
+        self.port = all_ports[pid]    # this process' own port
         self.num_processes = num_processes
-        self.local_lock = 0           # local time step
+        self.local_lock = 0           # local logical timestamp
         self.d = d                    # the bump up for lamport's logical lock
         self.events = []              # record past event
 
         # initialize a server
         self.serverSocket = socket.socket()
-        self.serverSocket.bind(("127.0.0.1", self.port))
+        self.serverSocket.bind(("127.0.0.1", self.port)) # all process communicate with 127.0.0.1, using different ports
         self.serverSocket.listen()
 
         self.listen_thread = None
@@ -33,6 +33,7 @@ class Process:
         self.do_CS = False
 
     def start_listen_thread(self):
+        # start a thread which would repeated listen for any message sent to this port
         def listen_exec_func(self):
             while self.do_listen:
                 (clientConnected, clientAddress) = self.serverSocket.accept()
@@ -71,6 +72,7 @@ class Process:
         self.listen_thread.start()
 
     def start_CS_thread(self):
+        # start a thread which constantly check if ok to enter Critical Section (CS). If yes then enter/leave CS.
         def CS_exec_func(self):
             while self.do_CS:
                 # see if can access CS
@@ -111,6 +113,7 @@ class Process:
         clientSocket.close()
 
     def simple_event(self):
+        # just a local event; the logical lock will be bumped up by self.d
         self.local_lock += self.d
         self.events.append((self.local_lock, "simple event"))
 
