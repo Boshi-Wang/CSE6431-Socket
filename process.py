@@ -48,7 +48,7 @@ class Process:
                 else:
                     # update local lock and event record
                     self.local_lock = max(self.local_lock, message_timestamp) + self.d
-                    print("received request from process {}".format(messager_pid))
+                    print("received request from process {} with timestamp {}".format(messager_pid, message_timestamp))
                     self.events.append((self.local_lock,
                                         "received request from process {}".format(messager_pid)))
 
@@ -59,7 +59,9 @@ class Process:
                     else:
                         if not(self.request_timestamp is None) and self.request_timestamp < message_timestamp:
                             do_reply = False
-                    print("do_reply:", do_reply, "{} {}".format(self.in_CS, self.request_timestamp))
+                    print("do_reply:", do_reply)
+                    print("in_CS:{}, req_timestamp:{}, local_lock:{}".format(self.in_CS, self.request_timestamp, self.local_lock))
+                    print()
                     if do_reply:
                         # clientConnected.send("{} {} {}".format(self.pid, self.local_lock, REPLY).encode())
                         self.send_reply(messager_pid)
@@ -96,7 +98,7 @@ class Process:
         clientSocket = socket.socket()
         self.local_lock += self.d
         self.request_timestamp = self.local_lock
-        print("sent request to process {}".format(target_pid))
+        print("sent request to process {} with timestamp {}".format(target_pid, self.local_lock))
         self.events.append((self.local_lock, "sent request to process {}".format(target_pid)))
         clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
         # send data to target server
