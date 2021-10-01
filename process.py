@@ -1,6 +1,5 @@
 import socket
 import threading
-import time
 import json
 
 REQUEST = 0
@@ -18,25 +17,28 @@ class Process:
         self.local_lock = 0           # local logical timestamp
         self.d = 1                    # the bump up for lamport's logical lock
         self.events = []              # record past event
-        self.request_ts = request_ts  # list of request timestamps to be made in the future; for convenience use only
+        self.request_ts = request_ts  # list of request timestamps to be made in the future
 
         # initialize a server
         self.serverSocket = socket.socket()
         self.serverSocket.bind(("127.0.0.1", self.port))  # all process communicate with 127.0.0.1, with different ports
         self.serverSocket.listen()
 
-        self.listen_threads = []
+        self.listen_threads = []      # a bunch of threads used for listening to incoming messages
         self.do_listen = False
-        self.in_CS = False
-        self.deferred_list = []  # list of pids with deferred reply
-        self.request_timestamp = None  # None if not currently making any request (either no request or in CS)
-        self.job_to_exec = None        # None if not currently making request. Stores the job to execute in CS.
-        self.reply_received = []  # list which records the pids where reply is received
+        self.in_CS = False            # whether in critical section
+        self.deferred_list = []       # list of pids with deferred reply
+        self.request_timestamp = None  # the timestamp of the current pending request; None if no
+        self.job_to_exec = None        # The job to execute in CS. None if no.
+        self.reply_received = []       # list of process ids where reply is received
 
-        self.CS_thread = None
+        self.CS_thread = None          # a thread which detects whether can enter CS
         self.do_CS = False
 
     def exec_job(self):
+        """
+        execute the job in self.job_to_exec
+        """
         with open('data.json', 'r') as fp:
             data = json.load(fp)
         [action, user, amount] = self.job_to_exec
@@ -60,7 +62,6 @@ class Process:
             json.dump(data, fp)
 
     def start_listen_thread(self):
-        # start a thread which would repeated listen for any message sent to this port
         def listen_exec_func(self):
             while self.do_listen:
                 (clientConnected, clientAddress) = self.serverSocket.accept()
@@ -74,8 +75,6 @@ class Process:
                                         "received reply from p{} ".format(messager_pid)))
                 else:
                     # received a REQUEST
-                    # TODO: do we update here as below? I think no
-                    # self.local_lock = max(self.local_lock, message_timestamp) + self.d
 
                     # wait until the order is right
                     while len(self.request_ts) > 0:
@@ -101,15 +100,18 @@ class Process:
                     else:
                         self.deferred_list.append(messager_pid)
 
+        # initialize and start the listening threads
         self.do_listen = True
         for _ in range(len(self.all_ports)+1):
             self.listen_threads.append(threading.Thread(target=listen_exec_func, args=(self,)))
         print("Start listen_thread...")
-        for thrd in self.listen_threads:
-            thrd.start()
+        for th in self.listen_threads:
+            th.start()
 
     def start_CS_thread(self):
-        # start a thread which constantly check if ok to enter Critical Section (CS). If yes then enter/leave CS.
+        """
+        start a thread which constantly check if ok to enter Critical Section (CS). If yes then enter/leave CS.
+        """
         def CS_exec_func(self):
             while self.do_CS:
                 # wait until there's a job to execute
@@ -130,17 +132,21 @@ class Process:
                     self.job_to_exec = None
                     self.request_timestamp = None
 
+        self.do_CS = True
         self.CS_thread = threading.Thread(target=CS_exec_func, args=(self,))
         print("Start CS_thread")
-        self.do_CS = True
         self.CS_thread.start()
 
     def send_request(self, target_pid_list, job_config):
+        """
+        send a request to processes listed in target_pid_list.
+        job_config: [timestamp, action, user, amount]
+        """
         # wait until currently there's no request
         while not (self.request_timestamp is None):
             pass
+
         timestamp, action, user, amount = job_config
-        timestamp = int(timestamp)
         assert action in ['DepositCash', 'WithdrawCash', 'ApplyInterest', 'CheckBalance']
         assert user in ['A', 'B', 'C']
         if amount is None:
@@ -150,14 +156,14 @@ class Process:
         self.local_lock = timestamp
         self.request_timestamp = self.local_lock
         for target_pid in target_pid_list:
+            # send data to target server
             clientSocket = socket.socket()
             clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
-            # send data to target server
             clientSocket.send("{} {} {}".format(self.pid, self.request_timestamp, REQUEST).encode())
             clientSocket.close()
             print("sent request to p{} with timestamp {} ".format(target_pid, self.request_timestamp))
             self.events.append((self.local_lock, "sent request to p{} with timestamp {} ".format(target_pid, self.request_timestamp)))
-        del self.request_ts[0]
+        del self.request_ts[0]   # delete the sent request
 
     def send_reply(self, target_pid):
         clientSocket = socket.socket()

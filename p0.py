@@ -10,7 +10,7 @@ p.start_CS_thread()
 p.start_listen_thread()
 
 
-p.send_request(target_pid_list=[1, 2], job_config=[4, 'DepositCash', 'A', 20])
-p.send_request(target_pid_list=[1, 2], job_config=[57, 'ApplyInterest', 'C', 0.1])
-p.send_request(target_pid_list=[1, 2], job_config=[200, 'CheckBalance', 'A', None])
+p.send_request(target_pid_list=[1, 2], job_config=[4,   'DepositCash',   'A', 20])
+p.send_request(target_pid_list=[1, 2], job_config=[57,  'ApplyInterest', 'C', 0.1])
+p.send_request(target_pid_list=[1, 2], job_config=[200, 'CheckBalance',  'A', None])
 

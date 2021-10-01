@@ -10,7 +10,7 @@ p.start_CS_thread()
 p.start_listen_thread()
 
 
-p.send_request(target_pid_list=[0, 1], job_config=[2, 'ApplyInterest', 'B', 0.1])
-p.send_request(target_pid_list=[0, 1], job_config=[68, 'WithdrawCash', 'A', 10])
-p.send_request(target_pid_list=[0, 1], job_config=[202, 'CheckBalance', 'C', None])
+p.send_request(target_pid_list=[0, 1], job_config=[2,   'ApplyInterest', 'B', 0.1])
+p.send_request(target_pid_list=[0, 1], job_config=[68,  'WithdrawCash',  'A', 10])
+p.send_request(target_pid_list=[0, 1], job_config=[202, 'CheckBalance',  'C', None])
 
