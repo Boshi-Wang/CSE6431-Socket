@@ -4,7 +4,7 @@ import time
 all_ports = [10000, 20000, 30000]
 
 # init and start sub-threads
-p = Process(pid=0, all_ports=all_ports, num_processes=len(all_ports), request_ts=[4, 57, 200])
+p = Process(pid=0, all_ports=all_ports, num_processes=len(all_ports), request_ts_l=[[4, 200], [], [57]])
 time.sleep(5)   # wait for staring other processes
 p.start_CS_thread()
 p.start_listen_thread()
