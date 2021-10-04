@@ -17,7 +17,7 @@ class Process:
         self.local_lock = 0           # local logical timestamp
         self.d = 1                    # the bump up for lamport's logical lock
         self.events = []              # record past event
-        self.request_ts = request_ts  # list of request timestamps to be made in the future
+        self.request_ts = request_ts  # list of request timestamps to be sent out in the future
 
         # initialize a server
         self.serverSocket = socket.socket()
@@ -28,7 +28,7 @@ class Process:
         self.do_listen = False
         self.in_CS = False            # whether in critical section
         self.deferred_list = []       # list of pids with deferred reply
-        self.request_timestamp = None  # the timestamp of the current pending request; None if no
+        self.request_timestamp = None  # the timestamp of the current sent pending request; None if no
         self.job_to_exec = None        # The job to execute in CS. None if no.
         self.reply_received = []       # list of process ids where reply is received
 
@@ -75,12 +75,6 @@ class Process:
                                         "received reply from p{} ".format(messager_pid)))
                 else:
                     # received a REQUEST
-
-                    # wait until the order is right
-                    while len(self.request_ts) > 0:
-                        if self.request_ts[0] > message_timestamp:
-                            break
-
                     print("received request from p{} with timestamp {} ".format(messager_pid, message_timestamp))
                     self.events.append((self.local_lock,
                         "received request from p{} with timestamp {} ".format(messager_pid, message_timestamp)))
@@ -89,16 +83,19 @@ class Process:
                     do_reply = True
                     if self.in_CS:
                         do_reply = False
-                    else:
-                        if not(self.request_timestamp is None) and self.request_timestamp < message_timestamp:
+                    elif not(self.request_timestamp is None) and self.request_timestamp < message_timestamp:
+                        do_reply = False
+                    elif len(self.request_ts) > 0:
+                        if self.request_ts[0] < message_timestamp:
                             do_reply = False
+
                     print("do_reply:", do_reply)
-                    print("\t reason: in_CS:{}, req_timestamp:{}, local_lock:{} ".format(self.in_CS, self.request_timestamp, self.local_lock))
+                    print("\t reason: in_CS:{}, req_timestamp:{}, req_ts:{} ".format(
+                                    self.in_CS, self.request_timestamp, self.request_ts))
                     if do_reply:
-                        # clientConnected.send("{} {} {}".format(self.pid, self.local_lock, REPLY).encode())
                         self.send_reply(messager_pid)
                     else:
-                        self.deferred_list.append(messager_pid)
+                        self.deferred_list.append([messager_pid, message_timestamp])
 
         # initialize and start the listening threads
         self.do_listen = True
@@ -121,13 +118,17 @@ class Process:
                 if set(self.reply_received) == set(range(self.num_processes))-{self.pid}:
                     self.in_CS = True
                     print("BEGIN <CS> ")
-                    # perform job_to_execute
+                    # perform self.job_to_execute
                     self.exec_job()
                     print("END <CS> ")
                     self.reply_received = []  # empty the list
                     # send a reply to all deferred requests
-                    for deferred_pid in self.deferred_list:
-                        self.send_reply(deferred_pid)
+                    for [deferred_pid, message_timestamp] in self.deferred_list:
+                        if len(self.request_ts) == 0:
+                            self.send_reply(deferred_pid)
+                        elif self.request_ts[0] > message_timestamp:
+                            self.send_reply(deferred_pid)
+
                     self.in_CS = False
                     self.job_to_exec = None
                     self.request_timestamp = None
