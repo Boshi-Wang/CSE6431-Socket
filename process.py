@@ -58,10 +58,13 @@ class Process:
                     # send back a reply if necessary
                     do_reply = True
                     if self.in_CS_l[userid]:
+                        # no reply if no critical section
                         do_reply = False
                     elif not(self.request_timestamp_l[userid] is None) and self.request_timestamp_l[userid] < message_timestamp:
+                        # no reply if current pending request has smaller timestamp
                         do_reply = False
                     elif len(self.request_ts_l[userid]) > 0:
+                        # no reply if there exists future requests yet to make with smaller timestamp
                         if self.request_ts_l[userid][0] < message_timestamp:
                             do_reply = False
 
@@ -128,7 +131,7 @@ class Process:
             assert action == 'CheckBalance'
 
         userid = user2id[user]
-        # wait until currently there's no request
+        # wait until currently there's no current pending request
         while not (self.request_timestamp_l[userid] is None):
             pass
 
@@ -148,7 +151,7 @@ class Process:
         clientSocket = socket.socket()
         clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
         # send data to target server
-        clientSocket.send("{} {} {} {}".format(self.pid, -1, REPLY, userid).encode())
+        clientSocket.send("{} {} {} {}".format(self.pid, -1, REPLY, userid).encode())  # timestamp is -1 as it's not used
         print("sent reply to p{}".format(target_pid))
         clientSocket.close()
 
