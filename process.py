@@ -51,10 +51,10 @@ class Process:
                 assert message_type in [REQUEST, REPLY]
                 if message_type == REPLY:
                     self.reply_received_l[userid].append(messager_pid)
-                    print("received reply from p{} ".format(messager_pid))
+                    print("received reply from p{} on user {} ".format(messager_pid, id2user[userid]))
                 else:
                     # received a REQUEST
-                    print("received request from p{} with timestamp {} ".format(messager_pid, message_timestamp))
+                    print("received request from p{} with timestamp {} on user {} ".format(messager_pid, message_timestamp, id2user[userid]))
                     # send back a reply if necessary
                     do_reply = True
                     if self.in_CS_l[userid]:
@@ -93,10 +93,10 @@ class Process:
                 # see if can access CS
                 if set(self.reply_received_l[userid]) == set(range(self.num_processes))-{self.pid}:
                     self.in_CS_l[userid] = True
-                    print("BEGIN <CS> ")
+                    print("BEGIN <CS> on user {}".format(id2user[userid]))
                     # perform self.job_to_execute
                     self.exec_job(userid)
-                    print("END <CS> ")
+                    print("END <CS> on user {}".format(id2user[userid]))
                     self.reply_received_l[userid] = []  # empty the list
                     # send a reply to all deferred requests
                     for [deferred_pid, message_timestamp] in self.deferred_list_l[userid]:
@@ -141,7 +141,7 @@ class Process:
             clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
             clientSocket.send("{} {} {} {}".format(self.pid, self.request_timestamp_l[userid], REQUEST, userid).encode())
             clientSocket.close()
-            print("sent request to p{} with timestamp {} ".format(target_pid, self.request_timestamp_l[userid]))
+            print("sent request to p{} with timestamp {} on user {} ".format(target_pid, self.request_timestamp_l[userid], id2user[userid]))
         del self.request_ts_l[userid][0]   # delete the sent request
 
     def send_reply(self, target_pid, userid):
@@ -149,7 +149,7 @@ class Process:
         clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
         # send data to target server
         clientSocket.send("{} {} {} {}".format(self.pid, -1, REPLY, userid).encode())
-        print("sent reply to p{}".format(target_pid))
+        print("sent reply to p{} on user {}".format(target_pid, id2user[userid]))
         clientSocket.close()
 
     def end(self):
