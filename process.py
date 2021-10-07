@@ -58,13 +58,10 @@ class Process:
                     # send back a reply if necessary
                     do_reply = True
                     if self.in_CS_l[userid]:
-                        # no reply if no critical section
                         do_reply = False
                     elif not(self.request_timestamp_l[userid] is None) and self.request_timestamp_l[userid] < message_timestamp:
-                        # no reply if current pending request has smaller timestamp
                         do_reply = False
                     elif len(self.request_ts_l[userid]) > 0:
-                        # no reply if there exists future requests yet to make with smaller timestamp
                         if self.request_ts_l[userid][0] < message_timestamp:
                             do_reply = False
 
@@ -99,7 +96,7 @@ class Process:
                     print("BEGIN <CS> on user {}".format(id2user[userid]))
                     # perform self.job_to_execute
                     self.exec_job(userid)
-                    print("END <CS> on user {}".format(id2user[userid]))
+                    print("END <CS> on user {}".format(id2user[userid], id2user[userid]))
                     self.reply_received_l[userid] = []  # empty the list
                     # send a reply to all deferred requests
                     for [deferred_pid, message_timestamp] in self.deferred_list_l[userid]:
@@ -131,7 +128,7 @@ class Process:
             assert action == 'CheckBalance'
 
         userid = user2id[user]
-        # wait until currently there's no current pending request
+        # wait until currently there's no request
         while not (self.request_timestamp_l[userid] is None):
             pass
 
@@ -152,9 +149,7 @@ class Process:
         clientSocket.connect(("127.0.0.1", self.all_ports[target_pid]))
         # send data to target server
         clientSocket.send("{} {} {} {}".format(self.pid, -1, REPLY, userid).encode())
-        print("sent reply to p{} on user {}".format(target_pid, id2user[userid]))
-        clientSocket.send("{} {} {} {}".format(self.pid, -1, REPLY, userid).encode())  # timestamp is -1 as it's not used
-        print("sent reply to p{} on user {}".format(target_pid, id2user[userid]))
+        print("sent reply to p{} on user {} ".format(target_pid, id2user[userid]))
         clientSocket.close()
 
     def end(self):
